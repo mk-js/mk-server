@@ -37,7 +37,12 @@ function start(cb) {
 
     //反向代理  // https://github.com/lishengguo/h2o2
     if (proxy && proxy.length) {
-        proxy.forEach(i => console.log("proxy path: " + i.path + " \t=>\t " + i.handler.proxy.uri))
+        proxy.forEach(i => {
+            if (i.vhost && i.vhost.join) {
+                console.log('proxy domain: ' + (i.vhost && i.vhost.join(',')));
+            }
+            console.log("proxy path: " + i.path + " \t=>\t " + i.handler.proxy.uri);
+        })
         webServer.register(require("./../lib/h2o2/lib"), (err) => {
             if (err) {
                 throw err;
