@@ -3,7 +3,7 @@
 ## 特点
 
 - 这是一个基于nodejs, hapi, sequelize, node-zookeeper-dubbo的开源项目  
-- 实现了webapi框架、IoC依赖注入、RPC远程调用、数据库访问、事务、身份授权，
+- 实现了webapi框架、IoC依赖注入，
 
 ## 适用人员
 
