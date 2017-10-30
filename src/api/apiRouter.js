@@ -1,3 +1,5 @@
+const fs = require('fs')
+const multiparty = require('multiparty')
 const path = require("path")
 const wsdl = require("./wsdl")
 
@@ -31,11 +33,42 @@ const apiRouter = (apiRootUrl, services, interceptors) => {
       }
 
       console.log(`api path:  ${apiUrl} \t\t=>\t ${service.name}.api.${apiName}`);
-      urls.forEach(url => routes.push({
-        method: ["GET", "POST"],
-        path: url,
-        handler: (request, reply) => handlerWrapper(context({ request, reply, interceptors, apiUrl: url, handler, service }))
-      }))
+      urls.forEach(url => {
+        let router = {
+          method: ["GET", "POST"],
+          path: url,
+          config: {
+            handler: (request, reply) => handlerWrapper(context({ request, reply, interceptors, apiUrl: url, handler, service }))
+          }
+        }
+        if (handler.__uploadfile) {
+          router = {
+            method: 'POST',
+            path: url,
+            config: {
+              payload: {
+                maxBytes: 209715200,
+                output: 'stream',
+                parse: false
+              },
+              handler: (request, reply) => {
+                var form = new multiparty.Form()
+                form.parse(request.payload, function (err, fields, files) {
+                  if (err) return reply(err)
+                  fs.readFile(files.file[0].path, function (err, data) {
+                    request.payload = {
+                      name: files.file[0].originalFilename,
+                      content: new Buffer(data)
+                    }
+                    handlerWrapper(context({ request, reply, interceptors, apiUrl: url, handler, service }))
+                  });
+                });
+              }
+            }
+          }
+        }
+        routes.push(router)
+      })
     })
   })
 
@@ -52,6 +85,13 @@ function context(ctx) {
   return Object.assign(ctx, {
     resBody: {},
     return: (value) => {
+      if (value && value.__downloadfile) {
+        let name = encodeURIComponent(value.name)
+        ctx.reply(value.content)
+          .header('Content-Type', 'application/octet-stream')
+          .header('Content-Disposition', 'attachment;filename=' + name + ';filename*=utf-8\'\'' + name)
+        return
+      }
       ctx.resBody.result = true;
       ctx.resBody.value = value;
       ctx.reply(ctx.resBody);
@@ -69,7 +109,7 @@ function context(ctx) {
   });
 }
 
-function handlerWrapper(ctx) { 
+function handlerWrapper(ctx) {
   let request = ctx.request
   let data = null
   if (request.method == "get") {
@@ -77,7 +117,7 @@ function handlerWrapper(ctx) {
   } else {
     data = request.payload
   }
-  
+
   let array = ctx.interceptors
   if (array && Array.isArray(array)) {
     for (var i = 0; i < array.length; i++) {
