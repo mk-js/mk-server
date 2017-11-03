@@ -86,10 +86,17 @@ function context(ctx) {
     resBody: {},
     return: (value) => {
       if (value && value.__downloadfile) {
+        let isOpen = value.isOpen
         let name = encodeURIComponent(value.name)
-        ctx.reply(value.content)
-          .header('Content-Type', 'application/octet-stream')
-          .header('Content-Disposition', 'attachment;filename=' + name + ';filename*=utf-8\'\'' + name)
+        if (isOpen) {
+          ctx.reply(value.content)
+            .header('Content-Type', 'application/pdf')
+            .header('Content-Disposition', 'attachment;filename=' + name + ';filename*=utf-8\'\'' + name)
+        } else {
+          ctx.reply(value.content)
+            .header('Content-Type', 'application/octet-stream')
+            .header('Content-Disposition', 'attachment;filename=' + name + ';filename*=utf-8\'\'' + name)
+        }
         return
       }
       ctx.resBody.result = true;
