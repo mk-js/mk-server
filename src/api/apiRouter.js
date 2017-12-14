@@ -1,5 +1,6 @@
 const fs = require('fs')
 const multiparty = require('multiparty')
+const options = require('./../config').current;
 const path = require("path")
 const wsdl = require("./wsdl")
 
@@ -38,6 +39,7 @@ const apiRouter = (apiRootUrl, services, interceptors) => {
           method: ["GET", "POST"],
           path: url,
           config: {
+            cors: options.cors || false,
             handler: (request, reply) => handlerWrapper(context({ request, reply, interceptors, apiUrl: url, handler, service }))
           }
         }
