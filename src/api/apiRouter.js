@@ -101,7 +101,13 @@ function context(ctx) {
       }
       ctx.resBody.result = true;
       ctx.resBody.value = value;
-      ctx.reply(ctx.resBody);
+      if (ctx.request.method == 'get' && ctx.request.query && ctx.request.query.callback) {
+        let cb = ctx.request.query.callback
+        let argStr = JSON.stringify(ctx.resBody)
+        ctx.reply(`;${cb}(${argStr});`)
+      } else {
+        ctx.reply(ctx.resBody);
+      }
     },
     error: (ex) => {
       ctx.resBody.result = false;
