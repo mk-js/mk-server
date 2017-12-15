@@ -1,3 +1,4 @@
+const options = require('./../config').current;
 
 const webRouter = (cfg) => {
   if (!cfg) return {}
@@ -65,6 +66,9 @@ function proxyRouter(path, obj, hosts) {
   let route = {
     method: ["GET", "POST"],
     path,
+    config: {
+      cors: options.cors || false
+    },
     handler: {
       proxy: {
         xforward: true,
