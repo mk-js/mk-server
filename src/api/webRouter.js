@@ -59,23 +59,24 @@ function dirRouter(path, obj, hosts) {
 }
 
 function redirectRouter(path, obj, hosts) {
+  let key = hosts + '//' + path
   let route = {
     method: ["GET", "POST"],
     path,
     handler: (request, reply) => {
       let response = reply()
-      let file = redirectCache[path]
+      let file = redirectCache[key]
       response.redirect(file)
       response.temporary(true)
     }
   }
-  let file = redirectCache[path]
+  let file = redirectCache[key]
   if (file == null) {
     let reg = RegExp(obj.file)
     fs.readdir(obj.path, (err, files) => {
       let matched = files.filter(f => f.match(reg))
       file = matched && matched[0] || obj.file
-      redirectCache[path] = file
+      redirectCache[key] = file
     })
   }
   if (hosts) {
