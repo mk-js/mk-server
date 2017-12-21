@@ -22,7 +22,7 @@ function start(cb) {
     });
 
 
-    let { dir, proxy } = webRouter(website);
+    let { dir, proxy, redirect } = webRouter(website);
 
     //静态文件  // https://github.com/hapijs/inert
     if (dir && dir.length) {
@@ -49,6 +49,11 @@ function start(cb) {
             }
             webServer.route(proxy);
         });
+    }
+
+    //302
+    if (redirect && redirect.length) { 
+        webServer.route(redirect);
     }
 
 

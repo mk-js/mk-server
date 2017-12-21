@@ -1,8 +1,10 @@
 const options = require('./../config').current;
+const fs = require('fs')
+const redirectCache = {}
 
 const webRouter = (cfg) => {
   if (!cfg) return {}
-  let routes = { dir: [], proxy: [] }
+  let routes = { dir: [], proxy: [], redirect: [] }
   if (typeof cfg == "string") {
     cfg = { "/": cfg }
   }
@@ -19,6 +21,8 @@ function buildRouters(obj, routes, hosts) {
       let uri = value.uri || value;
       if (typeof uri == "string" && uri.startsWith("http:")) {
         routes.proxy.push(proxyRouter(key, value, hosts))
+      } else if (value.code == '302') {
+        routes.redirect.push(redirectRouter(key, value, hosts))
       } else {
         routes.dir.push(dirRouter(key, value, hosts))
       }
@@ -47,6 +51,32 @@ function dirRouter(path, obj, hosts) {
   }
   if (obj.method) {
     route.method = obj.method
+  }
+  if (hosts) {
+    route.vhost = hosts
+  }
+  return route
+}
+
+function redirectRouter(path, obj, hosts) {
+  let route = {
+    method: ["GET", "POST"],
+    path,
+    handler: (request, reply) => {
+      let response = reply()
+      let file = redirectCache[path]
+      response.redirect(file)
+      response.temporary(true)
+    }
+  }
+  let file = redirectCache[path]
+  if (file == null) {
+    let reg = RegExp(obj.file)
+    fs.readdir(obj.path, (err, files) => {
+      let matched = files.filter(f => f.match(reg))
+      file = matched && matched[0] || obj.file
+      redirectCache[path] = file
+    })
   }
   if (hosts) {
     route.vhost = hosts
