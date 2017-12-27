@@ -95,7 +95,7 @@ function proxyRouter(path, obj, hosts) {
     uri += "{path*}"
   }
   let route = {
-    method: ["GET", "POST"],
+    method: ["GET", "POST", "OPTIONS"],
     path,
     config: {
       cors: options.cors || false
