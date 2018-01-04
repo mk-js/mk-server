@@ -57,9 +57,10 @@ const apiRouter = (apiRootUrl, services, interceptors) => {
                 var form = new multiparty.Form()
                 form.parse(request.payload, function (err, fields, files) {
                   if (err) return reply(err)
-                  fs.readFile(files.file[0].path, function (err, data) {
+                  var theFile = files[Object.keys(files)[0]]
+                  fs.readFile(theFile[0].path, function (err, data) {
                     request.payload = {
-                      name: files.file[0].originalFilename,
+                      name: theFile[0].originalFilename,
                       content: new Buffer(data)
                     }
                     handlerWrapper(context({ request, reply, interceptors, apiUrl: url, handler, service }))
