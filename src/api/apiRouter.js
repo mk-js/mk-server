@@ -110,10 +110,13 @@ function context(ctx) {
       }
       ctx.resBody.result = true;
       ctx.resBody.value = value;
+      let contentType = ctx.request.headers['content-type'] || ''
       if (ctx.request.method == 'get' && ctx.request.query && ctx.request.query.callback) {
         let cb = ctx.request.query.callback
         let argStr = JSON.stringify(ctx.resBody)
         ctx.reply(`;${cb}(${argStr});`)
+      } else if (contentType.indexOf('x-www-form-urlencoded') != -1) {
+        ctx.reply(ctx.resBody.value); 
       } else {
         ctx.reply(ctx.resBody);
       }
