@@ -91,13 +91,19 @@ function context(ctx) {
       if (value && value.__downloadfile) {
         let isOpen = value.isOpen
         let name = encodeURIComponent(value.name)
+        let contentType = value.contentType
         if (isOpen) {
-          ctx.reply(value.content)
-            .header('Content-Type', 'application/pdf')
-            .header('Content-Disposition', 'attachment;filename=' + name + ';filename*=utf-8\'\'' + name)
+          if(contentType && contentType.indexOf("html")!=-1){
+            ctx.reply(value.content)
+              .header('Content-Type', contentType ) 
+          }else{
+            ctx.reply(value.content)
+              .header('Content-Type', contentType || 'application/pdf')
+              .header('Content-Disposition', 'inline;filename=' + name + ';filename*=utf-8\'\'' + name)  
+          }
         } else {
           ctx.reply(value.content)
-            .header('Content-Type', 'application/octet-stream')
+            .header('Content-Type', contentType || 'application/octet-stream')
             .header('Content-Disposition', 'attachment;filename=' + name + ';filename*=utf-8\'\'' + name)
         }
         return
