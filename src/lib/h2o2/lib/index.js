@@ -41,7 +41,8 @@ internals.schema = Joi.object({
     onResponse: Joi.func(),
     agent: Joi.object(),
     ttl: Joi.string().valid('upstream').allow(null),
-    maxSockets: Joi.number().positive().allow(false)
+    maxSockets: Joi.number().positive().allow(false),
+    uriMap: Joi.object()
 })
     // .xor('host', 'mapUri', 'uri') // uri和host同时存在时，host表示反向代理请求的header.host
     .xor('mapUri', 'uri')
@@ -71,7 +72,7 @@ internals.handler = function (route, handlerOptions) {
     Joi.assert(handlerOptions, internals.schema, 'Invalid proxy handler options (' + route.path + ')');
     Hoek.assert(!route.settings.payload || ((route.settings.payload.output === 'data' || route.settings.payload.output === 'stream') && !route.settings.payload.parse), 'Cannot proxy if payload is parsed or if output is not stream or data');
     const settings = Hoek.applyToDefaultsWithShallow(internals.defaults, handlerOptions, ['agent']);
-    settings.mapUri = handlerOptions.mapUri || internals.mapUri(handlerOptions.protocol, handlerOptions.host, handlerOptions.port, handlerOptions.uri, route.path);
+    settings.mapUri = handlerOptions.mapUri || internals.mapUri(handlerOptions.protocol, handlerOptions.host, handlerOptions.port, handlerOptions.uri, route.path, handlerOptions.uriMap);
 
     if (settings.ttl === 'upstream') {
         settings._upstreamTtl = true;
@@ -187,7 +188,7 @@ internals.handler.defaults = function (method) {
 };
 
 
-internals.mapUri = function (protocol, host, port, uri, path) {
+internals.mapUri = function (protocol, host, port, uri, path, maps) {
 
     if (uri) {
         return function (request, next) {
@@ -202,8 +203,25 @@ internals.mapUri = function (protocol, host, port, uri, path) {
                 .replace(/{path\*}/g, request.url.path.substr(path.indexOf('{path*}'))) //Compatible with nginx R-Proxy
                 .replace(/{path}/g, request.url.path);
 
-            Object.keys(request.params).forEach((key) => {
+            maps && Object.keys(maps).forEach(key => {
+                let map = maps[key]
+                let value = map
+                if (map && map.provider) {
+                    let provider = map.provider
+                    if (typeof provider == "string") {
+                        provider = map.provider = new Function('request', 'return ' + provider)
+                    }
+                    if (typeof provider == 'function') {
+                        value = provider(request)
+                    }
+                    if (map.values) {
+                        value = map.values[value]
+                    }
+                }
+                address = address.replace(new RegExp('{' + key + '}', 'g'), value)
+            })
 
+            Object.keys(request.params).forEach((key) => {
                 const re = new RegExp(`{${key}}`, 'g');
                 address = address.replace(re, request.params[key]);
             });

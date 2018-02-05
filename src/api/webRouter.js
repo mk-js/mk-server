@@ -74,6 +74,7 @@ function redirectRouter(path, obj, hosts) {
   if (file == null) {
     let reg = RegExp(obj.file)
     fs.readdir(obj.path, (err, files) => {
+      if (!files) return
       let matched = files.filter(f => f.match(reg))
       file = matched && matched[0] || obj.file
       redirectCache[key] = file
@@ -88,6 +89,7 @@ function redirectRouter(path, obj, hosts) {
 function proxyRouter(path, obj, hosts) {
   let host = obj.host
   let uri = obj.uri || obj
+  let uriMap = obj.uriMap
   if (path.endsWith("/")) {
     path += "{path*}"
   }
@@ -106,6 +108,7 @@ function proxyRouter(path, obj, hosts) {
         passThrough: true,
         host,
         uri,
+        uriMap,
       }
     }
   }
