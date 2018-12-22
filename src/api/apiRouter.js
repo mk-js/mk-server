@@ -3,10 +3,14 @@ const multiparty = require('multiparty')
 const options = require('./../config').current;
 const path = require("path")
 const wsdl = require("./wsdl")
+const apiNotFound = require("./apiNotFound")
+const apiBatcher = require("./apiBatcher")
 
 //处理全部服务的api与url绑定。
 const apiRouter = (apiRootUrl, services, interceptors) => {
   let routes = [];
+  let urlApiMap = {};
+  apiBatcher(services, urlApiMap, apiRootUrl)
   Object.keys(services).forEach(key => {
     let service = services[key];
     let apis = service.api;
@@ -43,6 +47,7 @@ const apiRouter = (apiRootUrl, services, interceptors) => {
             handler: (request, reply) => handlerWrapper(context({ request, reply, interceptors, apiUrl: url, handler, service }))
           }
         }
+        urlApiMap[url] = handler;
         if (handler.__uploadfile) {
           router = {
             method: 'POST',
@@ -75,7 +80,8 @@ const apiRouter = (apiRootUrl, services, interceptors) => {
     })
   })
 
-  wsdl(apiRootUrl, routes);//生成api描述文档
+  wsdl(apiRootUrl, routes, services);//生成api描述文档
+  apiNotFound(apiRootUrl, routes, services)
 
   return routes;
 }
@@ -93,13 +99,13 @@ function context(ctx) {
         let name = encodeURIComponent(value.name)
         let contentType = value.contentType
         if (isOpen) {
-          if(contentType && contentType.indexOf("html")!=-1){
+          if (contentType && contentType.indexOf("html") != -1) {
             ctx.reply(value.content)
-              .header('Content-Type', contentType ) 
-          }else{
+              .header('Content-Type', contentType)
+          } else {
             ctx.reply(value.content)
               .header('Content-Type', contentType || 'application/pdf')
-              .header('Content-Disposition', 'inline;filename=' + name + ';filename*=utf-8\'\'' + name)  
+              .header('Content-Disposition', 'inline;filename=' + name + ';filename*=utf-8\'\'' + name)
           }
         } else {
           ctx.reply(value.content)
@@ -116,7 +122,7 @@ function context(ctx) {
         let argStr = JSON.stringify(ctx.resBody)
         ctx.reply(`;${cb}(${argStr});`)
       } else if (contentType.indexOf('x-www-form-urlencoded') != -1) {
-        ctx.reply(ctx.resBody.value); 
+        ctx.reply(ctx.resBody.value);
       } else {
         ctx.reply(ctx.resBody);
       }
@@ -137,6 +143,15 @@ function context(ctx) {
 function handlerWrapper(ctx) {
   let request = ctx.request
   let data = Object.assign(request.payload || {}, request.query);
+
+  if(request && !request.headers['x-real-ip']){
+    let realip = request.headers['x-forwarded-for'] || request.info.remoteAddress
+    if(realip && realip.indexOf(",")!=-1){
+      realip = realip.split(",")[0]
+    }
+    request.headers['x-real-ip'] = realip
+  }
+  //console.log(ctx.request.headers);
 
   let array = ctx.interceptors
   if (array && Array.isArray(array)) {

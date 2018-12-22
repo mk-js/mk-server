@@ -228,7 +228,7 @@ internals.mapUri = function (protocol, host, port, uri, path, maps) {
 
             let headers = {}; //支持设置反向代理的header.host
             if (host) {
-                host = host.replace(/{host}/g, request.info.host)
+                host = host.replace(/{host}/g, request.connection.info.host)
                 headers.host = host;
             }
 

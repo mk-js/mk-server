@@ -4,8 +4,7 @@ const apiRouter = require('./apiRouter');
 const webRouter = require('./webRouter');
 
 function start(cb) {
-
-    let { host, port, website, apiRootUrl, services, interceptors } = options;
+    let { host, port, website, apiRootUrl, services, interceptors, auth } = options;
 
     if (services && services._delayStart === true) {
         services._start = start
@@ -20,6 +19,12 @@ function start(cb) {
             strictHeader: false, //不验证cookie
         },
     });
+
+    if (auth && auth.default) {
+        webServer.auth.scheme(auth.default, auth[auth.default]);
+        webServer.auth.strategy('default', auth.default);
+        webServer.auth.default('default');
+    }
 
 
     let { dir, proxy, redirect } = webRouter(website);
@@ -52,7 +57,7 @@ function start(cb) {
     }
 
     //302
-    if (redirect && redirect.length) { 
+    if (redirect && redirect.length) {
         webServer.route(redirect);
     }
 
